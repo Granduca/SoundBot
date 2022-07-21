@@ -7,10 +7,14 @@ logger = logging.getLogger(__name__)
 
 
 class Sound:
-    def __init__(self, item_id: str, title: str, mp3: str, duration: str, spectrum: str):
+    def __init__(self, item_id: str, url: str, title: str, description: str, author: str, mp3: str, ogg: str, duration: str, spectrum: str):
+        self.url = url
         self.id = item_id
         self.title = title
+        self.description = description
+        self.author = author
         self.mp3 = mp3
+        self.ogg = ogg
         self.duration = duration
         self.spectrum = spectrum
 
@@ -52,14 +56,35 @@ class Request:
     def _de_soup_items(soup: BeautifulSoup):
         results = []
         for item in soup.find_all("div", {"class": "sample_player_small"}):
-            item_id = item['id']
-            title = item.find('a', attrs={'class': 'title'}).text
-            mp3 = item.find('a', attrs={'class': 'mp3_file'})['href']
-            spectrum = item.find('a', attrs={'class': 'spectrum'})['href']
-            duration = item.find('span', attrs={'class': 'duration'}).text
-            results.append(Sound(item_id, title, mp3, duration, spectrum))
+            if item:
+                if not item['id']:
+                    continue
+                item_id = item['id']
+                url = f'{Request.url}{Request._get_item_arg(item, "a", "title", "href")}'
+                title = Request._get_item_arg(item, 'a', 'title', '__text__')
+                description = Request._get_item_arg(item, 'p', 'description', '__text__')
+                author = Request._get_item_arg(item, 'a', 'user', '__text__')
+                mp3 = Request._get_item_arg(item, 'a', 'mp3_file', 'href')
+                ogg = Request._get_item_arg(item, 'a', 'ogg_file', 'href')
+                spectrum = Request._get_item_arg(item, 'a', 'spectrum', 'href')
+                duration = Request._get_item_arg(item, 'span', 'duration', '__text__')
+                results.append(Sound(item_id, url, title, description, author, mp3, ogg, duration, spectrum))
 
         return results
+
+    @staticmethod
+    def _get_item_arg(item, tag, class_name, key):
+        result = item.find(tag, attrs={'class': class_name})
+        if result:
+            if key == '__text__':
+                return result.text
+            if result[key]:
+                return result[key]
+        else:
+            return 'empty'
+
+    def __repr__(self):
+        return f"<\"{self.url}\" ({self.query})>"
 
 
 def search_sound(query: str, page: int = 1):

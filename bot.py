@@ -1,13 +1,14 @@
+import datetime
 import json
 import logging
 import traceback
 
-from telegram import Update, ParseMode, InlineQuery, InlineQueryResultAudio
+from telegram import Update, ParseMode, InlineQuery, InlineQueryResultAudio, InlineQueryResultVoice
 from telegram.error import NetworkError
 from telegram.ext import CallbackContext, CommandHandler, InlineQueryHandler
 from urllib3.exceptions import HTTPError
 
-from freesound.request import search_sound, view_browse
+from freesound.request import search_sound, view_browse, Sound
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -33,15 +34,7 @@ def handle_search_inline_query(update: Update, _context: CallbackContext):
         sounds = search_sound(search_query)
         audio_results = list()
         for sound in sounds:
-            duration = round(float(sound.duration)/1000)
-            audio_result = InlineQueryResultAudio(sound.id,
-                                                  audio_url=sound.mp3,
-                                                  title=sound.title,
-                                                  caption=sound.title,
-                                                  performer=sound.title,
-                                                  filename=sound.title,
-                                                  audio_duration=duration,
-                                                  thumb_url=sound.spectrum)
+            audio_result = sound_to_inline_query(sound)
             audio_results.append(audio_result)
         logger.info(audio_results)
         return inline_query.answer(audio_results)
@@ -49,18 +42,25 @@ def handle_search_inline_query(update: Update, _context: CallbackContext):
         sounds = view_browse()
         audio_results = list()
         for sound in sounds:
-            duration = round(float(sound.duration) / 1000)
-            audio_result = InlineQueryResultAudio(sound.id,
-                                                  audio_url=sound.mp3,
-                                                  title=sound.title,
-                                                  caption=sound.title,
-                                                  performer=sound.title,
-                                                  filename=sound.title,
-                                                  audio_duration=duration,
-                                                  thumb_url=sound.spectrum)
+            audio_result = sound_to_inline_query(sound)
             audio_results.append(audio_result)
         logger.info(audio_results)
         return inline_query.answer(audio_results)
+
+
+def sound_to_inline_query(sound: Sound):
+    duration = round(float(sound.duration) / 1000)
+    duration = datetime.timedelta(seconds=duration)
+    duration_text = f"{duration.seconds // 60:02d}:{duration.seconds % 60:02d}"
+    audio_result = InlineQueryResultAudio(sound.id,
+                                          audio_url=sound.mp3,
+                                          title=sound.title,
+                                          caption=f'{sound.description}\n{sound.url}\nAuthor: {sound.author}',
+                                          performer=f'({duration_text}) {sound.description}',
+                                          filename=sound.title,
+                                          audio_duration=duration.seconds,
+                                          thumb_url=sound.spectrum)
+    return audio_result
 
 
 def handle_error(update, context: CallbackContext) -> None:
