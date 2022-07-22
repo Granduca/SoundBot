@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 
-from telegram import Update, ParseMode, InlineQuery, InlineQueryResultAudio, InlineQueryResultVoice
+from telegram import Update, ParseMode, InlineQuery, InlineQueryResultAudio
 from telegram.error import NetworkError
 from telegram.ext import CallbackContext, CommandHandler, InlineQueryHandler
 from urllib3.exceptions import HTTPError
@@ -52,14 +52,14 @@ def sound_to_inline_query(sound: Sound):
     duration = round(float(sound.duration) / 1000)
     duration = datetime.timedelta(seconds=duration)
     duration_text = f"{duration.seconds // 60:02d}:{duration.seconds % 60:02d}"
-    audio_result = InlineQueryResultAudio(sound.id,
+    audio_result = InlineQueryResultAudio(type='audio',
+                                          id=sound.id,
                                           audio_url=sound.mp3,
                                           title=sound.title,
-                                          caption=f'{sound.description}\n{sound.url}\nAuthor: {sound.author}',
                                           performer=f'({duration_text}) {sound.description}',
-                                          filename=sound.title,
                                           audio_duration=duration.seconds,
-                                          thumb_url=sound.spectrum)
+                                          caption=f'{sound.description}\n{sound.url}\nAuthor: {sound.author}')
+
     return audio_result
 
 
